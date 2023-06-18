@@ -1,102 +1,91 @@
 import time
-import urllib
 import urllib.request
-import urllib.parse
 import os
-
+import json
 from selenium import webdriver
- 
- 
-def SelectUrl(purl):
+from selenium.webdriver.common.by import By
+
+def select_url(purl, name, work):
     headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.5735.91 Safari/537.36'}
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.5735.91 Safari/537.36'
+    }
     ret = urllib.request.Request(purl, headers=headers)
-    page = urllib.request.urlopen(ret, timeout=10)
-    fileName = page.info()['Content-Disposition'].split('filename=')[1]
-    fileName = fileName.replace('"', '').replace("'", "")
-    logofile = page.read()
-    fileName = "D:\\AllProject\\Python\\cosersets\\" + name + "\\" + work+ "\\" + fileName
-    print(fileName)
-    with open(fileName, "wb") as file:
-        file.write(logofile)
- 
- 
-def mkdir(path):
-    # 去除首位空格
-    path = path.strip()
-    # 去除尾部 \ 符号
-    path = path.rstrip("\\")
- 
-    # 判断路径是否存在
-    # 存在     True
-    # 不存在   False
-    isExists = os.path.exists(path)
- 
-    # 判断结果
-    if not isExists:
-        # 如果不存在则创建目录
-        # 创建目录操作函数
+
+    try:
+        page = urllib.request.urlopen(ret, timeout=30)
+        file_name = purl.split('/')[-1]
+        file_path = os.path.join("D:\\AllProject\\Python\\cosersets\\", name, work, file_name)
+        print(file_path)
+        if not os.path.exists(file_path):
+            with open(file_path, "wb") as file:
+                file.write(page.read())
+                print(f"Downloaded file {file_name} successfully.")
+        else:
+            print(f"Skipping file {file_name} - File already exists.")
+    except Exception as e:
+        print(f"Error downloading file: {str(e)}")
+
+def make_directory(path):
+    path = path.strip().rstrip("\\")
+    is_exists = os.path.exists(path)
+    if not is_exists:
         os.makedirs(path)
- 
         print(path + ' 创建成功')
- 
         return True
     else:
-        # 如果目录存在则不创建，并提示目录已存在
         print(path + ' 目录已存在')
- 
         return False
 
-proxy = "http://192.168.1.34:7890"
+# proxy = "http://192.168.1.34:7890"
 options = webdriver.ChromeOptions()
-options.add_argument('--proxy-server=' + proxy)
+# options.add_argument('--proxy-server=' + proxy)
 driver = webdriver.Chrome(options=options)
- 
+
 url = "https://www.cosersets.com/1/main"
 driver.get(url)
 driver.implicitly_wait(30)
-time.sleep(0.5)
+time.sleep(3)
 
-name = ""
-work = ""
-from selenium.webdriver.common.by import By
 NAME = driver.find_elements(By.CLASS_NAME, "el-table__row")
-for i in range(0, len(NAME)):
+for i in range(len(NAME)):
     NAME = driver.find_elements(By.CLASS_NAME, "el-table__row")
     s = NAME[i].find_element(By.CLASS_NAME, "cell")
     name = s.text
-    # print(s.text)
     driver.get(url + "/" + name)
     driver.implicitly_wait(30)
     time.sleep(3)
+
+    time.sleep(3)  # 等待一段时间，确保页面加载完全
     WORK = driver.find_elements(By.CLASS_NAME, "el-table__row")
-    for k in range(0, len(WORK)):
+    for k in range(len(WORK)):
         WORK = driver.find_elements(By.CLASS_NAME, "el-table__row")
+        if k >= len(WORK):
+            continue
         s2 = WORK[k].find_element(By.CLASS_NAME, "cell")
-        # print(s2.text)
         work = s2.text
         print(name + " | " + work)
         if work == "/":
             continue
         else:
-            mkdir("D:\\AllProject\\Python\\cosersets\\" + name + "\\" + work)
+            directory_path = os.path.join("D:\\AllProject\\Python\\cosersets\\", name, work)
+            if os.path.exists(directory_path):
+                print(f"Skipping directory {directory_path} - Directory already exists.")
+                continue
+            make_directory(directory_path)
             driver.get(url + "/" + name + "/" + work)
             driver.implicitly_wait(30)
             picture = driver.find_elements(By.CLASS_NAME, "img-mode-img")
-            for j in range(0, len(picture)):
-                print(picture[j].get_attribute("src"))
+            for j in range(len(picture)):
                 r = picture[j].get_attribute("src")
-                SelectUrl(r)
-                #time.sleep(0.25)
- 
-        driver.get(url+ "/" + name)
-        #driver.back()
+                select_url(r, name, work)  # Pass name and work as arguments
+                time.sleep(1)
+
+        driver.get(url + "/" + name)
         driver.implicitly_wait(30)
         time.sleep(3)
+
     driver.get(url)
-    # driver.back()
     driver.implicitly_wait(30)
     time.sleep(3)
- 
- 
+
 driver.quit()
